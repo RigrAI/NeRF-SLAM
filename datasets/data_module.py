@@ -8,14 +8,20 @@ class DataModule(MIMOPipelineModule):
         super().__init__(name, args.parallel_run, args)
         self.device = device
         self.idx = -1
+        self.max_frames = 100
 
     def get_input_packet(self):
         return True
 
     def spin_once(self, input):
         log.check(input)
-        if self.name == 'real':
-            return self.dataset.stream()
+        if self.name == 'real' or self.name == 'usb':
+            self.idx += 1
+            if self.idx < self.max_frames:
+                return self.dataset.stream()
+            else:
+                print("Stopping data module!")
+                super().shutdown_module()
         else:
             self.idx += 1
             if self.idx < len(self.dataset):
@@ -41,6 +47,9 @@ class DataModule(MIMOPipelineModule):
         elif self.name == "real":
             from datasets.real_sense_dataset import RealSenseDataset
             self.dataset = RealSenseDataset(self.args, self.device)
+        elif self.name == "usb":
+            from datasets.usb_dataset import USBCameraDataset
+            self.dataset = USBCameraDataset(self.args, self.device)
         else:
             raise Exception(f"Unknown dataset: {self.name}")
         return super().initialize_module()
